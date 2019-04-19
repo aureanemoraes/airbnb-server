@@ -4,12 +4,28 @@ const Property = use("App/Models/Property")
 
 class PropertyController {
 
-  async index () {
-    const properties = Property.all()
+  async index ({ request }) {
+    const { latitude, longitude } = request.all()
+    const properties = Property.query()
+      .with('images')
+      .nearBy(latitude, longitude, 10)
+      .fetch()
     return properties
   }
 
-  async store ({ request, response }) {
+  async store ({ auth, request}) {
+    const { id } = auth.user
+    const data = request.only([
+      'title',
+      'address',
+      'latitude',
+      'longitude',
+      'price'
+    ])
+
+    const property = await Property.create({ ...data, user_id: id})
+
+    return property
   }
 
   async show ({ params }) {
@@ -20,7 +36,22 @@ class PropertyController {
     return property
   }
 
-  async update ({ params, request, response }) {
+  async update ({ params, request }) {
+    const property = await Property.findOrFail(params.id)
+    
+    const data = request.only([
+      'title',
+      'address',
+      'latitude',
+      'longitude',
+      'price'
+    ])
+
+    property.merge(data)
+
+    await property.save()
+
+    return property
   }
 
   async destroy ({ params, auth, response }) {
